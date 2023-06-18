@@ -64,10 +64,18 @@ def get_translation(word, api_key):
     })
     assert res.status_code == 200
     root = ET.fromstring(res.text)
-    return root.findall("./item/sense/translation/trans_word")[0].text
+    translations = root.findall("./item/sense/translation/trans_word")
+    if translations == []:
+        raise RuntimeError(f'Не могу найти перевод слова {word}')
+    return translations[0].text
 
 def download_image(word):
-    GOOGLE_CRAWLER.crawl(keyword=word, max_num=1, overwrite=True)
+    for _ in range(3):
+        try:
+            GOOGLE_CRAWLER.crawl(keyword=word, max_num=1, overwrite=True)
+            break
+        except:
+            continue
     image_file = next(MEDIA_DIR.glob('000001.*'))
     new_name = word_dir(word) / f'{word}{image_file.suffix}'
     image_file.rename(new_name)
@@ -106,9 +114,10 @@ def make_deck(deck_name, api_key, words):
             note, media_files = make_note(word, api_key)
             deck.add_note(note)
             media.extend(media_files)
-            logger.info('Карточка для слова {word} была создана!')
-        except:
-            logger.error(f'Ошибка создания карточки для слова {word}')
+            logger.info(f'Карточка для слова {word} была создана!')
+            break
+        except Exception as e:
+            logger.error(f'Ошибка создания карточки для слова {word}: {e}')
 
     package = genanki.Package(deck)
     package.media_files = media
