@@ -69,7 +69,7 @@ def get_translation(word, api_key):
         raise RuntimeError(f'Не могу найти перевод слова {word}')
     return translations[0].text
 
-def download_image(word):
+def download_image(word, filename):
     for _ in range(3):
         try:
             GOOGLE_CRAWLER.crawl(keyword=word, max_num=1, overwrite=True)
@@ -77,7 +77,7 @@ def download_image(word):
         except:
             continue
     image_file = next(MEDIA_DIR.glob('000001.*'))
-    new_name = word_dir(word) / f'{word}{image_file.suffix}'
+    new_name = word_dir(filename) / f'{filename}{image_file.suffix}'
     image_file.rename(new_name)
     return new_name
 
@@ -88,9 +88,9 @@ def make_sound(word):
 
 def make_note(word, api_key):
     make_word_dir(word)
-    image_file = download_image(word)
     sound_file = make_sound(word)
     translation = get_translation(word, api_key)
+    image_file = download_image(translation.split(';')[0], word)
     note = genanki.Note(model=ANKI_MODEL, fields=[word, translation, f'<img src="{image_file.name}">', f'[sound:{sound_file.name}]'])
     return (note, [image_file, sound_file])
 
@@ -115,7 +115,6 @@ def make_deck(deck_name, api_key, words):
             deck.add_note(note)
             media.extend(media_files)
             logger.info(f'Карточка для слова {word} была создана!')
-            break
         except Exception as e:
             logger.error(f'Ошибка создания карточки для слова {word}: {e}')
 
